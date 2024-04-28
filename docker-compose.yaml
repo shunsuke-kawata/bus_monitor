@@ -1,0 +1,10 @@
+version: "3" 
+services:
+  python: # サービス名 
+    container_name: bus_monitor # コンテナ名
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/tmp/work/ #現在のフォルダをコンテナにマウント  (ローカルのディレクトリ):(コンテナ内のディレクトリ)
+    tty: true  #コンテナが起動し続ける
