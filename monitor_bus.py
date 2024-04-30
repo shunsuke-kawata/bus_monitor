@@ -98,14 +98,11 @@ def parse_html(url,destination_info):
     return price_list
                     
 def get_min_data(destination_info,price_list):
-    destination = destination_info['description']
-    day = destination_info['day']
     
     min = price_list[0]
     for price in price_list:
         if(int(min[:min.find('円')].replace(',', ''))>int(price[:price.find('円')].replace(',', ''))):
             min = price
-    min_text = f'最安値：{min}'
     return int(min[:min.find('円')].replace(',', ''))
 
 def notify_data(path=CSV_PATH):
@@ -114,19 +111,22 @@ def notify_data(path=CSV_PATH):
         data = [x for x in reader]
     
     plot_data = np.array(data).T
-    is_changed = False
+    message_list = []
     for datum in plot_data:
         destination = datum[0]
-        if(datum[-2]==datum[-1]):
-            continue
-        is_changed = True
-        transition_data = f'最安値：{datum[-2]}→{datum[-1]}'
-        return_text = '\n'.join([destination,transition_data])
-        data = {'message': '\n'+f'{return_text}'}
-        res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
-    if not(is_changed):
-        data = {'message': '変化なし'}
-        res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
+        transition_data = f'{destination}\n最安値：{datum[-2]}円→{datum[-1]}円'
+        
+        if(datum[-2]!=datum[-1]):
+            
+            data = {'message':f'\n更新があった区間\n{transition_data}'}
+            res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
+            
+        message_list.append(transition_data)
+    
+    message = '\n'.join(message_list)
+    data = {'message':f'\n{message}'}
+    res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
+    print(res)
         
 def write_csv(data_to_write,path=CSV_PATH): 
     with open(path, 'r') as f:
@@ -150,7 +150,7 @@ def main():
     notify_data()
 
 if __name__=='__main__':
-    schedule.every(12).hours.do(main) 
+    schedule.every(1).minutes.do(main) 
     while True:
-        schedule.run_pending()  # 3. 指定時間が来てたら実行、まだなら何もしない
+        schedule.run_pending()
         time.sleep(1)
