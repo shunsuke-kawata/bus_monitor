@@ -150,7 +150,9 @@ def main():
     notify_data()
 
 if __name__=='__main__':
-    schedule.every(1).minutes.do(main) 
+    print("started monitoring")
+    #2時間ごとに実行する
+    schedule.every(12).hours.do(main) 
     while True:
         schedule.run_pending()
         time.sleep(1)

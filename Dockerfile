@@ -17,3 +17,4 @@ COPY ./* /tmp/work/
 RUN pip install --upgrade pip
 RUN pip install setuptools
 RUN pip install -r requirements.txt
+ENTRYPOINT ["python","monitor_bus.py"]
