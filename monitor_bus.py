@@ -116,8 +116,8 @@ def notify_data(path=CSV_PATH):
         destination = datum[0]
         transition_data = f'{destination}の最安値\n{datum[-7]}→{datum[-5]}→{datum[-3]}→{datum[-1]}'
         
-        if(datum[-2]!=datum[-1]):
-            
+        #変更があった区間を通知
+        if(datum[-7]!=datum[-5] or datum[-5]!=datum[-3] or datum[-3]!=datum[-1]):
             data = {'message':f'\n更新があった区間\n{transition_data}'}
             res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
             
