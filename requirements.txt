@@ -3,5 +3,4 @@ requests
 python-dotenv
 lxml
 schedule
-matplotlib
-japanize-matplotlib
+numpy

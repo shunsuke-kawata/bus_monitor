@@ -7,14 +7,12 @@ from lxml import html,etree
 import schedule
 import csv
 import io
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
 
 load_dotenv()
 
 LINE_NOTIFY_TOKEN = os.getenv('LINE_NOTIFY_TOKEN')
-
 
 BUS_BASE_URL = 'https://www.bushikaku.net/search/'
 LINE_NOTIFY_URL = 'https://notify-api.line.me/api/notify'
@@ -74,6 +72,9 @@ notify_headers = {
 
 colorlist = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
 
+#1のときのみRhineで通知
+send_line_flag = 1
+
 def parse_html(url,destination_info):
     destination = destination_info['destination']
     day = destination_info['day']
@@ -84,8 +85,6 @@ def parse_html(url,destination_info):
     
     price_list = []
     for element in clearfix_elements:
-        # platform_boxを取得
-        # platform_box = element.xpath('.//div[@class="platform_box"]')[0]
         
         # fee_structureを取得
         fee_structures = element.xpath('.//div[@class="fee_structure"]')
@@ -97,7 +96,7 @@ def parse_html(url,destination_info):
                     price_list.append(price.text)
     return price_list
                     
-def get_min_data(destination_info,price_list):
+def get_min_data(price_list):
     
     min = price_list[0]
     for price in price_list:
@@ -112,9 +111,10 @@ def notify_data(path=CSV_PATH):
     
     plot_data = np.array(data).T
     message_list = []
-    for datum in plot_data:
+
+    for datum in plot_data[1:]:
         destination = datum[0]
-        transition_data = f'{destination}\n最安値：{datum[-2]}円→{datum[-1]}円'
+        transition_data = f'{destination}の最安値\n{datum[-7]}→{datum[-5]}→{datum[-3]}→{datum[-1]}'
         
         if(datum[-2]!=datum[-1]):
             
@@ -124,7 +124,7 @@ def notify_data(path=CSV_PATH):
         message_list.append(transition_data)
     
     message = '\n'.join(message_list)
-    data = {'message':f'\n{message}'}
+    data = {'message':f'\n{data[-10][0]}→{data[-1][0]}\n{message}'}
     res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
     print(res)
         
@@ -136,23 +136,33 @@ def write_csv(data_to_write,path=CSV_PATH):
     
     with open(path, 'w') as f:
         writer = csv.writer(f)
-        writer.writerows(data)
+        writer.writerow(data[0])
+        writer.writerows(data[-10:])
         
 def main():
-    row = []
+    global send_line_flag
+    
+    japan_datetime = datetime.now().strftime("%m/%d %H:%M")
+    row = [japan_datetime]
     for destination_info in destination_list:
         price_list = parse_html(url=BUS_BASE_URL,destination_info=destination_info)
-        min = get_min_data(destination_info=destination_info,price_list=price_list)
+        min = get_min_data(price_list=price_list)
         time.sleep(1)
         row.append(min)
     
     write_csv(row)
-    notify_data()
+    print("書き込み完了")
+
+    #8時間ごとに通知
+    if(send_line_flag==1):
+        notify_data()
+
+    send_line_flag = (send_line_flag+1)%8
 
 if __name__=='__main__':
     print("started monitoring")
-    #2時間ごとに実行する
-    schedule.every(12).hours.do(main) 
+    #1時間ごとに実行する
+    schedule.every(1).hours.do(main) 
     while True:
         schedule.run_pending()
         time.sleep(1)
