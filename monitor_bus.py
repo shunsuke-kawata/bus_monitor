@@ -59,6 +59,16 @@ destination_list = [
         'destination': 'kyoto_fukuoka/',
         'description':'京都-福岡',
         'day': '20240616'
+    },
+    {
+        'destination': 'fukuoka_kagawa/',
+        'description':'福岡から香川',
+        'day': '20240707'
+    },
+    {
+        'destination': 'kagawa_fukuoka/',
+        'description':'香川から福岡',
+        'day': '20240708'
     }
 ]
 
@@ -107,26 +117,25 @@ def get_min_data(price_list):
 def notify_data(path=CSV_PATH):
     with open(path, 'r', encoding='utf-8') as f:  # ファイルをutf-8で開く
         reader = csv.reader(f)
-        data = [x for x in reader]
+        csv_data = [x for x in reader]
     
-    plot_data = np.array(data).T
+    plot_csv_data= np.array(csv_data).T
     message_list = []
 
-    for datum in plot_data[1:]:
+    for datum in plot_csv_data[1:]:
         destination = datum[0]
-        transition_data = f'{destination}の最安値\n{datum[-7]}→{datum[-5]}→{datum[-3]}→{datum[-1]}'
+        transition_data = f'{destination}の最安値\n{datum[-4]}→{datum[-3]}→{datum[-2]}→{datum[-1]}'
         
         #変更があった区間を通知
-        if(datum[-7]!=datum[-5] or datum[-5]!=datum[-3] or datum[-3]!=datum[-1]):
-            data = {'message':f'\n更新があった区間\n{transition_data}'}
-            res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
-            
+        if(datum[-4]!=datum[-3] or datum[-3]!=datum[-2]or datum[-2]!=datum[-1]):
+            changed_data = {'message':f'\n更新があった区間\n{transition_data}'}
+            res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=changed_data)
         message_list.append(transition_data)
     
     message = '\n'.join(message_list)
-    data = {'message':f'\n{data[-10][0]}→{data[-1][0]}\n{message}'}
-    res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=data)
-    print(res)
+    message_data = {'message':f'\n{csv_data[-4][0]}→{csv_data[-1][0]}\n{message}'}
+    res = requests.post('https://notify-api.line.me/api/notify', headers=notify_headers,data=message_data)
+    print(res.status_code)
         
 def write_csv(data_to_write,path=CSV_PATH): 
     with open(path, 'r') as f:
@@ -157,10 +166,12 @@ def main():
     if(send_line_flag==1):
         notify_data()
 
-    send_line_flag = (send_line_flag+1)%8
+    send_line_flag = (send_line_flag+1)%4
 
 if __name__=='__main__':
     print("started monitoring")
+    notify_data()
+
     #1時間ごとに実行する
     schedule.every(1).hours.do(main) 
     while True:
